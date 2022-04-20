@@ -431,7 +431,6 @@ def draw_lines(img, left_fit, right_fit):
    
 def calculate_radius(img_height, left_fitx, right_fitx):
      # ----- Radius Calculation ------ #
-#     img_height = img.shape[0]
     y_eval = img_height
 
     ploty = np.linspace(0, img_height - 1, img_height)
@@ -565,11 +564,11 @@ def pipeline(image, debug_mode):
 
 PYTHONFILE = True
 
-input_video = "test_videos/challenge_video.mp4"
+input_video = "test_videos/project_video.mp4"
 if PYTHONFILE and len(sys.argv) > 1:
     input_video = sys.argv[1]
 
-debug = True
+debug = False
 if PYTHONFILE and len(sys.argv) > 2 and sys.argv[2] == "debug":
     debug = True
 
