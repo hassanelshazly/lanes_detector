@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python_file="./lanes_detector.py"
+python_file="./pipeline.py"
 
 if [[ $# -eq 1 ]] || [[ $# -eq 2 ]]; then
   input_video=$1

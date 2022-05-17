@@ -15,18 +15,26 @@ from moviepy.editor import VideoFileClip
 from IPython.display import HTML
 import glob
 from matplotlib.image import imread
-
-
-# In[3]:
-
-
-test_images = [plt.imread(image) for image in glob.glob('test_images/*.jpg')]
+import time
 
 
 # In[2]:
 
 
+test_images = [plt.imread(image) for image in glob.glob('test_images/*.jpg')]
+
+
+# ## Camera Calibration
+# We start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here we are assuming the chessboard is fixed on the   (x, y) plane at z=0, such that the object points are the same for each calibration image. Thus, objp is just a replicated array of coordinates, and objpoints will be appended with a copy of it every time I successfully detect all chessboard corners in a test image. imgpoints will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.
+# 
+# We then used the output objpoints and imgpoints to compute the camera calibration and distortion coefficients using the cv2.calibrateCamera() function. I applied this distortion correction to the test image using the cv2.undistort() function 
+# 
+
+# In[3]:
+
+
 def calibrate_camera():
+    
     """
         Calibrate camera from the provided calibration images
     """
@@ -78,6 +86,8 @@ def undistort(image):
     return cv2.undistort(image, mtx, dist, None, mtx)
 
 
+# ## Showing Images
+
 # In[4]:
 
 
@@ -95,6 +105,8 @@ def show_images(images, cmap=None):
 # show_images(test_images)
 
 
+# ## Applying function to a list of images
+
 # In[5]:
 
 
@@ -104,6 +116,8 @@ def apply(fun, images):
     """
     return list(map(fun, images))
 
+
+# ## Converting between image colors
 
 # In[6]:
 
@@ -132,7 +146,9 @@ hls_images = apply(convert_to_hls, test_images)
 # show_images(hls_images)
 
 
-# In[8]:
+# ## Extracting Yellow and White colors from image
+
+# In[7]:
 
 
 def hls_color_threshold(image):
@@ -162,7 +178,9 @@ hls_color_threshold_images = apply(hls_color_threshold, test_images)
 # show_images(hls_color_threshold_images, "gray")
 
 
-# In[9]:
+# ## Applying Thresholds
+
+# In[8]:
 
 
 def apply_thresholds(image):
@@ -203,7 +221,9 @@ threshold_images = apply(apply_thresholds, test_images)
 # show_images(threshold_images, "gray")
 
 
-# In[10]:
+# ## Region of Interest Extraction
+
+# In[9]:
 
 
 def extract_region_of_interest(image):
@@ -232,7 +252,9 @@ roi_images = apply(extract_region_of_interest, threshold_images)
 # show_images(roi_images, "gray")
 
 
-# In[11]:
+# ## Perspective Transform
+
+# In[10]:
 
 
 def warp(img):
@@ -268,7 +290,9 @@ warped_images = [warped_image[0] for warped_image in warped_images]
 # show_images(warped_images, cmap='gray')
 
 
-# In[13]:
+# ## Detecting Lanes
+
+# In[11]:
 
 
 ym_per_pix = 30 / 720.  # meters per pixel in y dimension
@@ -431,6 +455,7 @@ def draw_lines(img, left_fit, right_fit):
    
 def calculate_radius(img_height, left_fitx, right_fitx):
      # ----- Radius Calculation ------ #
+#     img_height = img.shape[0]
     y_eval = img_height
 
     ploty = np.linspace(0, img_height - 1, img_height)
@@ -465,7 +490,9 @@ lanes_images = [lanes_image[0] for lanes_image in lanes_images]
 # show_images(lanes_images)
 
 
-# In[14]:
+# ## Bending(Adding) Images
+
+# In[12]:
 
 
 def blend_images(image_1, image_2, α = 1, β = 0.8, λ = 0):
@@ -475,7 +502,9 @@ def blend_images(image_1, image_2, α = 1, β = 0.8, λ = 0):
     return cv2.addWeighted(image_1, α, image_2, β, λ)
 
 
-# In[15]:
+# ## Horizontal and Vertical Concatenation of Images
+
+# In[13]:
 
 
 def hconcat_resize(img_list, interpolation = cv2.INTER_CUBIC):
@@ -506,7 +535,7 @@ def make_grid(list_2d, interpolation = cv2.INTER_CUBIC):
     return vconcat_resize(img_list_v, interpolation=cv2.INTER_CUBIC)
 
 
-# In[16]:
+# In[14]:
 
 
 def show_info(image, radius, offset):
@@ -528,7 +557,68 @@ def show_info(image, radius, offset):
     return image
 
 
-# In[21]:
+# ## Load yolo weights, cfg, and labels
+
+# In[15]:
+
+
+cfg_path = "./yolo_files/yolov3.cfg"
+names_path = "./yolo_files/yolov3.names"
+weights_path = "./yolo_files/yolov3.weights"
+
+labels = open(names_path).read().strip().split("\n")
+net = cv2.dnn.readNetFromDarknet(cfg_path, weights_path)
+layers_names = net.getLayerNames()
+output_layers_names = [layers_names[i - 1] for i in net.getUnconnectedOutLayers()]
+
+
+# ## Process Image and Detect Vehicle
+
+# In[16]:
+
+
+def detect_vehicle(image):
+  (H, W) = image.shape[:2]
+  blob = cv2.dnn.blobFromImage(image, 1/255, (416, 416), crop=False, swapRB=True)
+  net.setInput(blob)
+  layers_output = net.forward(output_layers_names)
+  boxes = []
+  confidences = []
+  class_ids = []
+
+  for output in layers_output:
+    for detection in output:
+      scores = detection[5:]
+      class_id = np.argmax(scores)
+      confidence = scores[class_id]
+
+      if confidence > 0.85:
+        box = detection[:4] * np.array([W, H, W, H])
+        bx, by, bw, bh = box.astype("int")
+
+        x = int(bx - (bw / 2))
+        y = int(by - (bh / 2))
+
+        boxes.append([x, y, bw, bh])
+        confidences.append(float(confidence))
+        class_ids.append(class_id)
+
+  idxes = cv2.dnn.NMSBoxes(boxes, confidences, score_threshold = 0.4, nms_threshold = 0.7)
+
+  for idx in idxes:
+    (x, y) = [boxes[idx][0], boxes[idx][1]]
+    (w, h) = [boxes[idx][2], boxes[idx][3]]
+
+    cv2.rectangle(image, (x, y), (x + w, y + h), (255, 255, 0), 2)
+    text = "{}: {:.3f}".format(labels[class_ids[idx]], confidences[idx])
+    cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 2)
+
+  return image
+
+
+# ## Main Pipeline of Lane and Vehicle Detection 
+
+# In[17]:
 
 
 pre_lanes_image, pre_radius, pre_offset = 0, 0, 0
@@ -547,9 +637,9 @@ def pipeline(image, debug_mode):
          lanes_image, radius, offset = pre_lanes_image, pre_radius, pre_offset
     
     newwarp = cv2.warpPerspective(lanes_image, M_inv, (lanes_image.shape[1], lanes_image.shape[0])) 
-    final_image = blend_images(newwarp, image)
+    final_image = detect_vehicle(image)
+    final_image = blend_images(newwarp, final_image)
     show_info(final_image, radius, offset)
-
     if debug_mode:
         return make_grid(
             [[final_image],
@@ -559,21 +649,44 @@ def pipeline(image, debug_mode):
     return final_image
 
 
+# ## Test pipeline with image 
+
+# In[21]:
+
+
+image_path = "test_images/test4.jpg"
+out = pipeline(plt.imread(image_path), False)
+plt.imshow(out)
+plt.show()
+
+
+# ## Test pipeline with the challenge video
+
 # In[20]:
 
 
-PYTHONFILE = True
+PYTHONFILE = False
 
-input_video = "test_videos/project_video.mp4"
+input_video = "test_videos/challenge_video.mp4"
 if PYTHONFILE and len(sys.argv) > 1:
     input_video = sys.argv[1]
 
-debug = False
+debug = True
 if PYTHONFILE and len(sys.argv) > 2 and sys.argv[2] == "debug":
     debug = True
 
 output_video = "output_videos/" + input_video.split("/")[-1]
 
+start_t = time.time()
+
 clip = VideoFileClip(input_video)
-clip.fl_image(lambda image: pipeline(image, debug)).write_videofile(output_video, audio=False)
+get_ipython().run_line_magic('time', 'clip.fl_image(lambda image: pipeline(image, debug)).write_videofile(output_video, audio=False)')
+
+print("Finished at {}".format((time.time() - start_t)/60))
+
+
+# In[ ]:
+
+
+
 
