@@ -9,8 +9,6 @@
 ## System Pipeline
 
 ## Run
-Lanes detection using image processing techniques
-
 To run normal mode
 ```
 chmod u+x run.sh
