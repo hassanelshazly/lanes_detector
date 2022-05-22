@@ -6,8 +6,7 @@ if [[ $# -eq 1 ]] || [[ $# -eq 2 ]]; then
   input_video=$1
 
 	if [ -e $input_video ]; then
-    python3 $python_file $input_video $mode
-    excho "a"
+      echo "Video exist"
 	else 
       echo "Video does not exist"
       exit 1
@@ -16,6 +15,8 @@ if [[ $# -eq 1 ]] || [[ $# -eq 2 ]]; then
   if [ $# -eq 2 ]; then
     mode=$2
     python3 $python_file $input_video $mode
+  else
+    python3 $python_file $input_video
   fi
 
    if [ $? -eq 0 ]; then
@@ -34,7 +35,6 @@ if [[ $# -eq 1 ]] || [[ $# -eq 2 ]]; then
     echo "Output video is stored on: $output_video"
     echo "Use your favorite video player to play the video"
   fi
-
 else
   echo "Usage: ./run.sh <input_video> [mode]"
 	echo "Example: ./run.sh ./input.mp4"

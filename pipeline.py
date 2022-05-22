@@ -648,30 +648,17 @@ def pipeline(image, debug_mode):
              ])
     return final_image
 
-
-# ## Test pipeline with image 
-
-# In[21]:
-
-
-image_path = "test_images/test4.jpg"
-out = pipeline(plt.imread(image_path), False)
-plt.imshow(out)
-plt.show()
-
-
 # ## Test pipeline with the challenge video
 
 # In[20]:
 
-
-PYTHONFILE = False
-
 input_video = "test_videos/challenge_video.mp4"
+
+PYTHONFILE = True
 if PYTHONFILE and len(sys.argv) > 1:
     input_video = sys.argv[1]
 
-debug = True
+debug = False
 if PYTHONFILE and len(sys.argv) > 2 and sys.argv[2] == "debug":
     debug = True
 
@@ -680,13 +667,6 @@ output_video = "output_videos/" + input_video.split("/")[-1]
 start_t = time.time()
 
 clip = VideoFileClip(input_video)
-get_ipython().run_line_magic('time', 'clip.fl_image(lambda image: pipeline(image, debug)).write_videofile(output_video, audio=False)')
+clip.fl_image(lambda image: pipeline(image, debug)).write_videofile(output_video, audio=False)
 
 print("Finished at {}".format((time.time() - start_t)/60))
-
-
-# In[ ]:
-
-
-
-
