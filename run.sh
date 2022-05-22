@@ -5,12 +5,12 @@ python_file="./pipeline.py"
 if [[ $# -eq 1 ]] || [[ $# -eq 2 ]]; then
   input_video=$1
 
-	if [ -e $input_video ]; then
+  if [ -e $input_video ]; then
       echo "Video exist"
-	else 
+  else 
       echo "Video does not exist"
       exit 1
-	fi
+  fi
 
   if [ $# -eq 2 ]; then
     mode=$2
@@ -37,6 +37,6 @@ if [[ $# -eq 1 ]] || [[ $# -eq 2 ]]; then
   fi
 else
   echo "Usage: ./run.sh <input_video> [mode]"
-	echo "Example: ./run.sh ./input.mp4"
-	echo "Example: ./run.sh ./input.mp4 debug"
+  echo "Example: ./run.sh ./input.mp4"
+  echo "Example: ./run.sh ./input.mp4 debug"
 fi
